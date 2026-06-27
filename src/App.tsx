@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { appsSupabase } from "@/lib/apps-db";
 import type { Session } from "@supabase/supabase-js";
 import { MessageSquare, Send, LogOut, User, Loader2 } from "lucide-react";
 import { ACCOUNTS_URL } from "@/lib/config";
@@ -34,24 +35,26 @@ export default function ChatApp() {
   useEffect(() => {
     if (!session) return;
 
-    supabase.from("messages").select("*").order("created_at", { ascending: true }).then(({ data }) => {
+    appsSupabase.from("messages").select("*").order("created_at", { ascending: true }).then(({ data }) => {
       if (data) setMessages(data as Message[]);
     });
 
-    const channel = supabase.channel("messages").on(
+    const channel = appsSupabase.channel("messages").on(
       "postgres_changes",
       { event: "INSERT", schema: "public", table: "messages" },
       (payload) => {
         setMessages((prev) => [...prev, payload.new as Message]);
       }
-    ).subscribe();
+    ).subscribe((status) => {
+      console.log("Realtime status:", status);
+    });
 
-    return () => { supabase.removeChannel(channel); };
+    return () => { appsSupabase.removeChannel(channel); };
   }, [session]);
 
   const sendMessage = async () => {
     if (!input.trim() || !session?.user) return;
-    const { error } = await supabase.from("messages").insert({
+    const { error } = await appsSupabase.from("messages").insert({
       content: input.trim(),
       sender_id: session.user.id,
       sender_email: session.user.email,
