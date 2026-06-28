@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
 import { appsSupabase } from "@/lib/apps-db";
-import type { Session } from "@supabase/supabase-js";
+import { getSession, setSession, clearSession, decodeSession, type AppSession } from "@/lib/session";
 import { MessageSquare, Send, LogOut, User, Loader2 } from "lucide-react";
 import { ACCOUNTS_URL } from "@/lib/config";
 
@@ -14,22 +13,28 @@ interface Message {
 }
 
 export default function ChatApp() {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSessionState] = useState<AppSession | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      setSession(s);
-      setLoading(false);
-    });
+    const params = new URLSearchParams(window.location.search);
+    const encoded = params.get("session");
+    if (encoded) {
+      const appSession = decodeSession(encoded);
+      if (appSession) {
+        setSession(appSession);
+        setSessionState(appSession);
+        window.history.replaceState({}, "", window.location.pathname);
+        setLoading(false);
+        return;
+      }
+    }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s);
-    });
-
-    return () => subscription.unsubscribe();
+    const stored = getSession();
+    setSessionState(stored);
+    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -62,8 +67,9 @@ export default function ChatApp() {
     if (!error) setInput("");
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
+  const handleLogout = () => {
+    clearSession();
+    setSessionState(null);
     window.location.href = ACCOUNTS_URL;
   };
 
@@ -106,7 +112,7 @@ export default function ChatApp() {
             <div className="flex h-7 w-7 items-center justify-center rounded-full bg-surface border border-border">
               <User className="h-3.5 w-3.5" />
             </div>
-            <span>{session.user.email}</span>
+            <span>{session.user.displayName || session.user.email}</span>
           </div>
           <button onClick={handleLogout} className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm text-muted hover:text-foreground transition-colors">
             <LogOut className="h-3.5 w-3.5" /> Sign Out
