@@ -1,5 +1,6 @@
-import { Hash, Lock, VolumeX, Search } from "lucide-react";
+import { Hash, Lock, VolumeX, Search, Palette } from "lucide-react";
 import type { Channel } from "@/types";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 interface ChannelHeaderProps {
   channel: Channel;
@@ -24,6 +25,7 @@ export function ChannelHeader({ channel, onSearchClick }: ChannelHeaderProps) {
         <span className="text-sm text-muted truncate hidden sm:block">— {channel.topic}</span>
       )}
       <div className="flex-1" />
+      <ThemeToggle className="mr-2" />
       <button
         onClick={onSearchClick}
         className="rounded-lg px-3 py-1.5 text-sm text-muted hover:text-foreground hover:bg-surface-hover transition-colors border border-border"
